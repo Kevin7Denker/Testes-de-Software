@@ -1,11 +1,63 @@
-const axios = require('axios');
-require('dotenv').config();
-const api = `http://localhost:${process.env.PORT || 3000}`;
+process.env.NODE_ENV = 'test';
 
-test('POST /livros cria um livro', async () => {
-  const res = await axios.post(`${api}/livros`, { titulo: 'Clean Code', autor: 'Martin Code' });
-  expect(res.status).toBe(201);
-  expect(res.data.titulo).toBe('Clean Code');
+const request = require('supertest');
+const app = require('../src/app');
+const { sequelize, Livro } = require('../src/models');
 
-  await axios.delete(`${api}/livros/${res.data.id}`);
+describe('GET /livros/:id', () => {
+  beforeAll(async () => {
+    await sequelize.sync({ force: true });
+  });
+
+  beforeEach(async () => {
+    await Livro.destroy({ where: {} });
+  });
+
+  afterAll(async () => {
+    await sequelize.close();
+  });
+
+  test('retorna 200 com { id, titulo } quando o livro existe', async () => {
+    const livroCriado = await Livro.create({
+      titulo: 'Clean Code',
+      autor: 'Robert C. Martin',
+    });
+
+    const res = await request(app).get(`/livros/${livroCriado.id}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      id: livroCriado.id,
+      titulo: 'Clean Code',
+    });
+    expect(res.body).not.toHaveProperty('autor');
+  });
+
+  test('retorna 404 quando o livro não existe', async () => {
+    const res = await request(app).get('/livros/99999');
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ erro: 'Livro não encontrado' });
+  });
+
+  test('retorna 400 para tentativa de injection no id', async () => {
+    const res = await request(app).get('/livros/1%20OR%201=1');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ erro: 'Parâmetro id inválido' });
+  });
+
+  test('retorna 400 para id com tipo inválido', async () => {
+    const res = await request(app).get('/livros/abc');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ erro: 'Parâmetro id inválido' });
+  });
+
+  test('retorna 400 para id fora do limite seguro de inteiro', async () => {
+    const res = await request(app).get('/livros/9007199254740992');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ erro: 'Parâmetro id inválido' });
+  });
 });
