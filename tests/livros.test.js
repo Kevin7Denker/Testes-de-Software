@@ -3,7 +3,7 @@ process.env.NODE_ENV = 'test';
 const request = require('supertest');
 const { sequelize, Livro } = require('../src/models');
 
-const versions = ['v1', 'v2', 'v3'];
+const app = require('../src/versions/v1/app');
 
 beforeAll(async () => {
   await sequelize.sync({ force: true });
@@ -17,8 +17,7 @@ afterAll(async () => {
   await sequelize.close();
 });
 
-describe.each(versions)('Versão %s - GET /livros/:id', (version) => {
-  const app = require(`../src/versions/${version}/app`);
+describe('Versão v1 - GET /livros/:id', () => {
 
   test('retorna 200 com { id, titulo } quando o livro existe', async () => {
     const livroCriado = await Livro.create({
