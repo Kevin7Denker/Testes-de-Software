@@ -1,21 +1,24 @@
 process.env.NODE_ENV = 'test';
 
 const request = require('supertest');
-const app = require('../src/app');
 const { sequelize, Livro } = require('../src/models');
 
-describe('GET /livros/:id', () => {
-  beforeAll(async () => {
-    await sequelize.sync({ force: true });
-  });
+const versions = ['v1', 'v2', 'v3'];
 
-  beforeEach(async () => {
-    await Livro.destroy({ where: {} });
-  });
+beforeAll(async () => {
+  await sequelize.sync({ force: true });
+});
 
-  afterAll(async () => {
-    await sequelize.close();
-  });
+beforeEach(async () => {
+  await Livro.destroy({ where: {} });
+});
+
+afterAll(async () => {
+  await sequelize.close();
+});
+
+describe.each(versions)('Versão %s - GET /livros/:id', (version) => {
+  const app = require(`../src/versions/${version}/app`);
 
   test('retorna 200 com { id, titulo } quando o livro existe', async () => {
     const livroCriado = await Livro.create({

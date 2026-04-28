@@ -1,9 +1,12 @@
 process.env.NODE_ENV = 'test';
 
 const request = require('supertest');
-const app = require('../src/app');
 
-describe('Usuários', () => {
+const versions = ['v1', 'v2', 'v3'];
+
+describe.each(versions)('Versão %s - Usuários', (version) => {
+  const app = require(`../src/versions/${version}/app`);
+
   test('retorna 404 para rota ainda não implementada', async () => {
     const res = await request(app).get('/usuarios');
 
